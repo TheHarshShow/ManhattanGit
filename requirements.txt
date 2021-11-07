@@ -1,0 +1,9 @@
+click
+tensorflow
+tensorflow-addons
+scikit-image
+pandas
+numpy
+matplotlib
+tqdm
+scikit-learn
