@@ -22,6 +22,19 @@ def upsample(x, **kwargs):
 def conv3d_weightnorm(filters, kernel_size, padding='same', activation=None, **kwargs):
     return tfa.layers.WeightNormalization(layers.Conv3D(filters, kernel_size, padding=padding, activation=activation, **kwargs), data_init=False)
 
+def dense32_weightnorm(filters, kernel_size, padding='same', activation=None, **kwargs):
+    nn = tf.keras.Sequential()
+    nn.add(layers.Flatten())
+    nn.add(tfa.layers.WeightNormalization(layers.Dense(units=32*32,activation=activation, **kwargs), data_init=False))
+    return nn
+
+
+def dense64_weightnorm(filters, kernel_size, padding='same', activation=None, **kwargs):
+    nn = tf.keras.Sequential()
+    nn.add(layers.Flatten())
+    nn.add(tfa.layers.WeightNormalization(layers.Dense(units=64*64,activation=activation, **kwargs), data_init=False))
+    return nn
+
 def wdsr_3d(scale, num_filters, num_res_blocks, res_block_expansion,channels):
     img_inputs = Input(shape=(LR_SIZE, LR_SIZE,channels, 1))
 
@@ -34,7 +47,8 @@ def wdsr_3d(scale, num_filters, num_res_blocks, res_block_expansion,channels):
 
     #First layer
     #Extraction
-    m = conv3d_weightnorm(num_filters, (3,3,1),padding='same',activation='relu')(m)
+    m = dense32_weightnorm(num_filters, (5,5,1),padding='same',activation='relu')(m)
+    m = layers.Reshape((32,32,1,1))(m)
     #Upsampling
     m = conv3d_weightnorm(4, (3,3,1),padding='valid')(m)
     m = layers.Lambda(lambda x: tf.pad(x,[[0,0],[1,1],[1,1],[0,0],[0,0]],mode='REFLECT'))(m)
@@ -49,7 +63,8 @@ def wdsr_3d(scale, num_filters, num_res_blocks, res_block_expansion,channels):
 
     #Second Layer
     #Extraction
-    m = conv3d_weightnorm(num_filters, (3,3,1),padding='same',activation='relu')(m)
+    m = dense64_weightnorm(num_filters, (5,5,1),padding='same',activation='relu')(m)
+    m = layers.Reshape((64,64,1,1))(m)
     #Upsampling
     m = conv3d_weightnorm(4, (3,3,1),padding='valid')(m)
     m = layers.Lambda(lambda x: tf.pad(x,[[0,0],[1,1],[1,1],[0,0],[0,0]],mode='REFLECT'))(m)
@@ -64,4 +79,4 @@ def wdsr_3d(scale, num_filters, num_res_blocks, res_block_expansion,channels):
     outputs = m
     outputs = layers.Lambda(denormalize)(outputs)
 
-    return Model([img_inputs], outputs, name="wdsr")
+    return Model([img_inputs], outputs, name="manhattan")
